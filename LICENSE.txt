@@ -1,0 +1,19 @@
+ElevenLabs Voice Pro - Batch + Long Script Edition
+Copyright (c) 2026
+
+LICENSE FOR PERSONAL AND COMMERCIAL USE
+
+You are granted a non-exclusive, non-transferable license to use this software for personal and commercial purposes, including but not limited to:
+- Generating voice-overs for YouTube videos, podcasts, courses, etc.
+- Selling or distributing the generated audio files
+- Using it as part of client work or your own content business
+
+Restrictions:
+- You may NOT resell, redistribute, or sublicense this Python script or the source code itself as a standalone product.
+- You may NOT claim this tool as your own original creation when reselling services.
+
+The generated audio files belong to you. You are responsible for complying with ElevenLabs' terms of service and YouTube's monetization policies.
+
+This software is provided "as is", without warranty of any kind. Use at your own risk. The author is not liable for any issues arising from use of this tool or ElevenLabs API costs.
+
+By using this software, you agree to these terms.

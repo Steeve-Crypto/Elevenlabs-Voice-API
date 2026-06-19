@@ -1,0 +1,103 @@
+# ElevenLabs Voice Pro — Batch + Long Script Edition
+
+**The complete Python tool that turns your full YouTube scripts into natural, professional voice-overs — automatically.**
+
+No more manual chunking. No more gluing audio clips together. No more robotic-sounding breaks in long videos.
+
+This upgraded version adds **full batch processing** + **intelligent long-script support** using ElevenLabs' official Request Stitching technique.
+
+---
+
+## What You Get
+
+✅ **Automatic long-script handling**  
+Your 10, 20, or even 40+ minute scripts are intelligently split at natural paragraph/sentence boundaries and stitched back together with perfect voice consistency.
+
+✅ **Batch processing**  
+Drop 5, 10, or 20 scripts into the `scripts/` folder and generate all voice-overs in one command.
+
+✅ **One clean final MP3** per script — ready to drop straight into your video editor.
+
+✅ **Uses your own cloned voice** — 100% safe for YouTube monetization.
+
+✅ **Beautiful progress bars** + cost estimates before you spend any credits.
+
+✅ **Dry-run mode** so you can see exactly how your script will be processed without using API credits.
+
+✅ Full `.env` customization (model, stability, similarity, chunk size, etc.)
+
+---
+
+## Who This Is For
+
+- Faceless YouTube creators who want to publish daily/weekly without recording
+- Educational, storytelling, finance, tech, or long-form channels
+- Creators who already use ElevenLabs and want to remove the manual work
+- Anyone tired of scripts getting cut off or sounding inconsistent
+
+---
+
+## How It Works (Simple)
+
+1. Clone your voice once in ElevenLabs (Instant or Professional)
+2. Paste your full script into `script.txt` (or add multiple scripts to the `scripts/` folder)
+3. Run one command
+4. Get perfect voice-over audio in `outputs/`
+
+For long scripts it automatically:
+- Splits intelligently
+- Uses Request Stitching (official ElevenLabs method)
+- Merges everything into one seamless file
+
+The voice flows naturally from beginning to end — exactly like a real recording.
+
+---
+
+## What's Included
+
+- `generate_audio.py` — The smart generator (single + batch + long script)
+- Complete `README.md` with step-by-step instructions
+- `.env.example` template
+- Example scripts (short + longer) so you can test immediately
+- `scripts/` folder ready for batch work
+- `outputs/` folder for finished audio
+- Professional license for personal + commercial use
+
+---
+
+## Why This Version Is Worth It
+
+Most people struggle with long scripts because ElevenLabs has a per-request limit.
+
+This tool solves that problem properly using the method ElevenLabs themselves recommend.
+
+You save hours of manual work per video and get more consistent, professional results.
+
+---
+
+## Pricing & Requirements
+
+- Requires a paid ElevenLabs plan (you pay them per character — same as their website)
+- Flash v2.5 model recommended (fast + high character limit)
+- Python 3.9+
+- Works on Windows, Mac, and Linux
+
+**Note**: This is a Python tool (not a web app). You run it locally on your computer. Full instructions are included.
+
+---
+
+## 30-Day Money-Back Guarantee
+
+If it doesn't work for you (after following the clear instructions), just email me and I'll refund you. No questions asked.
+
+I'm confident this will save you serious time once you see it in action.
+
+---
+
+## Ready to Scale Your Voice-Overs?
+
+Stop fighting with long scripts and manual audio stitching.
+
+Get ElevenLabs Voice Pro — Batch + Long Script Edition today and start generating consistent, natural voice-overs at scale.
+
+Your future self (and your upload schedule) will thank you.

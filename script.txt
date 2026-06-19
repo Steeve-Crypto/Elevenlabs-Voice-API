@@ -1,6 +1,8 @@
-Paste your full video script here.
+This is your main script file.
 
-Example:
-Hello everyone, welcome back to the channel! Today we're talking about how to use AI voice cloning for YouTube videos without getting demonetized.
+Replace this text with your full YouTube video script.
 
-Make sure to replace this text with your actual narration script. The longer the better — the Flash model can handle up to around 40 minutes in one generation.
+For long scripts (over ~35,000 characters), the tool will automatically split it into natural chunks and use ElevenLabs Request Stitching so the voice flows consistently from beginning to end.
+
+Example short script:
+"Welcome back to the channel! Today we're diving deep into how AI voice tools can help creators like you stay consistent without burning out. Let's get started."
