@@ -1,10 +1,12 @@
-# ElevenLabs Voice Pro — Batch + Long Script Edition
+# ElevenLabs Voice Pro — Multi-Voice + Auto-Subtitles Edition
 
 **The complete Python tool that turns your full YouTube scripts into natural, professional voice-overs — automatically.**
 
-No more manual chunking. No more gluing audio clips together. No more robotic-sounding breaks in long videos.
+Now with **Multi-Voice Character Switching** and **Automatic SRT/VTT Subtitles** — the biggest time-savers for serious creators.
 
-This upgraded version adds **full batch processing** + **intelligent long-script support** using ElevenLabs' official Request Stitching technique.
+No more manual chunking. No more editing multiple audio clips. No more flat single-voice videos. No more spending hours on subtitles.
+
+This version uses ElevenLabs' official Request Stitching + Forced Alignment for the highest quality long-form + multi-speaker results.
 
 ---
 
@@ -17,6 +19,15 @@ Your 10, 20, or even 40+ minute scripts are intelligently split at natural parag
 Drop 5, 10, or 20 scripts into the `scripts/` folder and generate all voice-overs in one command.
 
 ✅ **One clean final MP3** per script — ready to drop straight into your video editor.
+
+✅ **Multi-Voice / Character Switching**  
+Use simple tags like [NARRATOR], [EXPERT], [GUEST] in your script. The tool switches voices automatically, adds natural pauses between speakers, and keeps each character's prosody consistent using per-speaker Request Stitching.
+
+✅ **Automatic Professional Subtitles (SRT + VTT)**  
+Powered by ElevenLabs Forced Alignment. Get perfectly timed word-level subtitles in seconds. Huge for YouTube SEO, retention, accessibility, and repurposing content.
+
+✅ **Still has everything from before**  
+Automatic long-script chunking, batch processing, dry-run safety, beautiful progress bars, and full control via .env.
 
 ✅ **Uses your own cloned voice** — 100% safe for YouTube monetization.
 
