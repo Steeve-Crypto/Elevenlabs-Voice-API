@@ -1,23 +1,24 @@
-# ElevenLabs Voice Pro — Multi-Voice + Auto-Subtitles Edition
+# ElevenLabs Voice Pro — Multi-Voice + Emotion Tags + Smart Chapters
 
 **Generate professional, natural-sounding voice-overs from your full YouTube scripts — automatically.**
 
-This tool now supports **Multi-Voice Character Switching** + **Automatic SRT/VTT Subtitles**.
+This tool supports **Multi-Voice Character Switching**, **inline Emotion & Style Tags**, **Smart Chapter detection**, **Automatic SRT/VTT Subtitles**, and intelligent long-script handling with Request Stitching.
 
-It handles long scripts intelligently, supports batch processing, and uses ElevenLabs' official Request Stitching + Forced Alignment for the highest quality results.
-
-Perfect for faceless YouTube channels, educational content, storytelling, and creators who want to publish consistently without recording every take.
+Perfect for faceless YouTube channels, storytelling, educational content, dialogue-style videos, and creators who want premium results without recording every take.
 
 ---
 
 ## ✅ What This Tool Actually Does
 
-1. Takes your video script (text file)
-2. Converts it to high-quality MP3 voice-over using **your own cloned voice**
-3. For long scripts: automatically splits at natural boundaries + uses Request Stitching for seamless flow
-4. Outputs one clean, ready-to-use MP3 file per script
+1. Takes your video script (text file) — supports [SPEAKER] tags, [excited] emotion tags, [pause Xs], and ## Chapter headings
+2. Converts it to high-quality MP3 voice-over using **your own cloned voice** (or multiple voices)
+3. Automatically detects chapters and outputs **separate chapter MP3s + one full merged audio**
+4. Applies emotion/style settings per section for more expressive delivery
+5. Uses Request Stitching (per speaker) so long content flows naturally
+6. Generates perfect timed **SRT + VTT subtitles** automatically using ElevenLabs Forced Alignment
+7. Supports batch processing of multiple scripts
 
-**Result**: Professional narration audio that sounds like you recorded it in one perfect take.
+**Result**: Professional, expressive voice-overs that sound like you recorded everything in one perfect session — with chapters and subtitles ready for YouTube.
 
 ---
 

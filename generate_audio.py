@@ -1,9 +1,11 @@
 #!/usr/bin/env python3
 """
-ElevenLabs Voice Pro - Multi-Voice + Auto-Subtitles Edition
+ElevenLabs Voice Pro - Multi-Voice + Emotion Tags + Smart Chapters Edition
 Professional voice-over generator with:
-- Automatic long-script chunking with Request Stitching
+- Automatic long-script chunking with Request Stitching (per-speaker)
 - Multi-Voice / Character Switching via [SPEAKER] tags
+- Per-section Emotion & Style control via inline tags: [excited], [whisper], [calm]...
+- Smart Chapter detection (## Heading, Chapter 1, etc.) → separate + full MP3s
 - Automatic SRT + VTT subtitle generation using Forced Alignment
 - Batch processing support
 
@@ -41,6 +43,19 @@ SIMILARITY_BOOST = float(os.getenv("SIMILARITY_BOOST", "0.85"))
 STYLE = float(os.getenv("STYLE", "0.0"))
 USE_SPEAKER_BOOST = os.getenv("USE_SPEAKER_BOOST", "true").lower() == "true"
 
+# Emotion / Style presets — map tags like [excited] to generation parameters
+EMOTION_PRESETS: Dict[str, Dict] = {
+    "excited": {"style": 0.65, "speed": 1.08, "stability": 0.65},
+    "whisper": {"stability": 0.35, "style": 0.15, "speed": 0.90},
+    "dramatic": {"style": 0.78, "stability": 0.55, "speed": 0.95},
+    "calm": {"stability": 0.92, "style": 0.08, "speed": 0.88},
+    "energetic": {"style": 0.55, "speed": 1.12, "stability": 0.70},
+    "serious": {"stability": 0.88, "style": 0.18, "speed": 0.92},
+    "sad": {"stability": 0.80, "style": 0.25, "speed": 0.85},
+    "happy": {"style": 0.50, "speed": 1.05, "stability": 0.75},
+    "pause": {"pause_seconds": 0},  # special, handled in merging
+}
+
 OUTPUT_DIR = Path("outputs")
 OUTPUT_DIR.mkdir(exist_ok=True)
 SCRIPTS_DIR = Path("scripts")
@@ -51,8 +66,8 @@ VOICES_FILE = Path("voices.json")
 
 def print_header():
     print("\n" + "="*72)
-    print("🎙️  ElevenLabs Voice Pro — Multi-Voice + Auto-Subtitles")
-    print("   Long Script • Character Switching • Request Stitching • SRT/VTT Subs")
+    print("🎙️  ElevenLabs Voice Pro — Multi-Voice + Emotion Tags + Smart Chapters")
+    print("   Long Script • Character Switching • Emotion Control • Auto Chapters • SRT/VTT")
     print("="*72 + "\n")
 
 
@@ -82,41 +97,138 @@ def load_voices() -> Dict[str, str]:
     return voices
 
 
-def parse_script_for_voices(script_text: str) -> List[Dict]:
+def parse_script_for_voices_and_emotions(script_text: str) -> List[Dict]:
     """
-    Parse script with optional [SPEAKER] tags.
-    Returns list of segments: [{"speaker": "NARRATOR", "text": "...", "original": "..."}]
-    If no tags found, returns one segment with speaker="default".
+    Advanced parser supporting:
+    - [SPEAKER] tags (e.g. [NARRATOR], [EXPERT])
+    - Inline emotion/style tags: [excited], [whisper], [dramatic], [calm], [happy], [sad], [energetic], [serious]
+    - Pause tags: [pause 2s] or [pause 1.5]
+    Returns list of atomic blocks:
+    [{"type": "speech", "speaker": "NARRATOR", "emotion": "excited", "text": "clean text"},
+     {"type": "pause", "seconds": 2.0}]
+    Tags are removed from spoken text. Unknown tags treated as speaker change.
     """
     script_text = script_text.strip()
     if not script_text:
         return []
 
-    # Regex to capture [UPPER_TAG] sections (case insensitive for tag, but we upper it)
-    # Matches [TAG] followed by text until next [TAG] or end
-    pattern = r'\[([A-Za-z0-9_]+)\](.*?)(?=\n*\[[A-Za-z0-9_]+\]|$)'
-    matches = list(re.finditer(pattern, script_text, re.DOTALL | re.IGNORECASE))
+    blocks = []
+    last_end = 0
+    current_speaker = "default"
+    current_emotion = None
 
-    segments = []
-    if matches:
-        for match in matches:
-            speaker = match.group(1).upper().strip()
-            text = match.group(2).strip()
-            if text:
-                segments.append({
-                    "speaker": speaker,
-                    "text": text,
-                    "original_tag": f"[{match.group(1)}]"
-                })
-    else:
-        # No tags found — treat entire script as default speaker
-        segments.append({
-            "speaker": "default",
-            "text": script_text,
-            "original_tag": ""
+    tag_pattern_full = r'\[([A-Za-z0-9_]+(?:\s+\d+(?:\.\d+)?s?)?)\]'
+    for match in re.finditer(tag_pattern_full, script_text, re.IGNORECASE):
+        # Text before this tag
+        preceding_text = script_text[last_end:match.start()].strip()
+        if preceding_text:
+            blocks.append({
+                "type": "speech",
+                "speaker": current_speaker,
+                "emotion": current_emotion,
+                "text": preceding_text
+            })
+
+        tag_content = match.group(1).strip().lower()
+        tag_upper = match.group(1).strip().upper()
+
+        if tag_content.startswith("/"):
+            # Ignore closing tags like [/whisper] for now (simple state machine)
+            last_end = match.end()
+            continue
+
+        # Decide if it's a known emotion/pause or a speaker tag
+        is_pause = tag_content.startswith("pause")
+        is_known_emotion = tag_content.split()[0] in EMOTION_PRESETS and tag_content.split()[0] != "pause"
+
+        if is_pause:
+            seconds = 0.8
+            m = re.search(r'(\d+(?:\.\d+)?)', tag_content)
+            if m:
+                seconds = float(m.group(1))
+            blocks.append({"type": "pause", "seconds": seconds})
+        elif is_known_emotion:
+            current_emotion = tag_content.split()[0]
+        else:
+            # Speaker change
+            current_speaker = tag_upper
+            current_emotion = None
+
+        last_end = match.end()
+
+    # Remaining text after last tag
+    remaining = script_text[last_end:].strip()
+    if remaining:
+        blocks.append({
+            "type": "speech",
+            "speaker": current_speaker,
+            "emotion": current_emotion,
+            "text": remaining
         })
 
-    return segments
+    # Fallback if no tags at all
+    if not blocks:
+        blocks.append({
+            "type": "speech",
+            "speaker": "default",
+            "emotion": None,
+            "text": script_text
+        })
+
+    # Clean empty speech blocks
+    blocks = [b for b in blocks if b["type"] == "pause" or (b.get("text") and b["text"].strip())]
+    return blocks
+
+
+def split_into_chapters(script_text: str) -> List[Dict]:
+    """
+    Detect smart chapters using ## Heading, # Heading, Chapter X, Part X, etc.
+    Returns list of {"title": "Chapter 1: Intro", "text": "..."}
+    If no chapters found, returns one chapter with the full text.
+    """
+    script_text = script_text.strip()
+    if not script_text:
+        return [{"title": "Full Script", "text": ""}]
+
+    # Common chapter patterns
+    chapter_patterns = [
+        r'^#{1,2}\s+(.+)$',                    # ## Chapter Title or # Title
+        r'^(Chapter|Part|Section)\s+\d+[:\s]*(.*)$',  # Chapter 1: Foo
+        r'^(Episode|Day)\s+\d+[:\s]*(.*)$',
+    ]
+
+    lines = script_text.splitlines(keepends=True)
+    chapters = []
+    current_title = "Full Script"
+    current_text = ""
+
+    found_chapter = False
+    for line in lines:
+        matched = False
+        for pat in chapter_patterns:
+            m = re.match(pat, line.strip(), re.IGNORECASE)
+            if m:
+                if current_text.strip():
+                    chapters.append({"title": current_title, "text": current_text.strip()})
+                # Build nice title
+                if m.lastindex and m.group(1):
+                    current_title = f"{m.group(1).title()} {m.group(2).strip()}" if m.lastindex > 1 else m.group(1).title()
+                else:
+                    current_title = line.strip().lstrip('#').strip()
+                current_text = ""
+                found_chapter = True
+                matched = True
+                break
+        if not matched:
+            current_text += line
+
+    if current_text.strip():
+        chapters.append({"title": current_title, "text": current_text.strip()})
+
+    if not found_chapter or len(chapters) == 0:
+        return [{"title": "Full Script", "text": script_text}]
+
+    return chapters
 
 
 def split_into_chunks(text: str, max_chars: int = MAX_CHUNK_CHARS) -> List[str]:
@@ -165,9 +277,10 @@ def generate_audio_segment(
     stability: float = STABILITY,
     similarity_boost: float = SIMILARITY_BOOST,
     style: float = STYLE,
+    speed: float = 1.0,
     use_speaker_boost: bool = USE_SPEAKER_BOOST
 ) -> Tuple[bytes, Optional[str]]:
-    """Generate one chunk. Returns (audio_bytes, request_id)."""
+    """Generate one chunk. Returns (audio_bytes, request_id). Supports speed and per-chunk params."""
     if previous_request_ids is None:
         previous_request_ids = []
 
@@ -176,10 +289,11 @@ def generate_audio_segment(
             text=text,
             voice_id=voice_id,
             model_id=model_id,
-            previous_request_ids=previous_request_ids[-3:] if previous_request_ids else None,  # max 3
+            previous_request_ids=previous_request_ids[-3:] if previous_request_ids else None,
             stability=stability,
             similarity_boost=similarity_boost,
             style=style,
+            speed=speed,
             use_speaker_boost=use_speaker_boost
         ) as response:
             request_id = response._response.headers.get("request-id")
@@ -322,91 +436,187 @@ def process_single_script(
     voices: Dict[str, str],
     generate_subs: bool = True
 ) -> Optional[Path]:
-    """Process one script file → final MP3 (+ optional subs). Returns output MP3 path or None."""
+    """Process one script file with full support for chapters, multi-voice, emotion tags, pauses.
+    Outputs per-chapter MP3s (if chapters found) + one full merged MP3 + subtitles.
+    Returns path to the full MP3 or None on failure.
+    """
     print(f"\n📄 Processing: {script_path.name}")
     script_text = script_path.read_text(encoding="utf-8")
 
-    segments = parse_script_for_voices(script_text)
-    if not segments:
-        print("⚠️  Script is empty after parsing.")
-        return None
+    # === Chapter detection ===
+    chapters = split_into_chapters(script_text)
+    has_chapters = len(chapters) > 1 or chapters[0]["title"] != "Full Script"
 
-    print(f"   Found {len(segments)} speaker segment(s)")
-
-    # Expand long segments into sub-chunks (keeps same speaker for stitching)
-    all_chunks = []  # list of (speaker, chunk_text, voice_id)
-    for seg in segments:
-        speaker = seg["speaker"]
-        voice_id = voices.get(speaker) or voices.get("default") or DEFAULT_VOICE_ID
-        if not voice_id:
-            print(f"❌ No voice ID found for speaker '{speaker}' or default.")
-            return None
-
-        sub_chunks = split_into_chunks(seg["text"])
-        for chunk in sub_chunks:
-            all_chunks.append((speaker, chunk, voice_id))
-
-    print(f"   Total chunks to generate: {len(all_chunks)}")
-
-    # Per-speaker request history for stitching
-    speaker_request_history: Dict[str, List[str]] = defaultdict(list)
-
-    segment_files = []
-    full_text_parts = []
-
-    pbar = tqdm(all_chunks, desc="Generating audio", unit="chunk")
-    for idx, (speaker, chunk_text, voice_id) in enumerate(pbar, 1):
-        prev_ids = speaker_request_history[speaker]
-        try:
-            audio_bytes, req_id = generate_audio_segment(
-                client, chunk_text, voice_id, MODEL_ID, previous_request_ids=prev_ids
-            )
-            if req_id:
-                speaker_request_history[speaker].append(req_id)
-
-            # Save temp segment
-            seg_path = TEMP_DIR / f"seg_{idx:04d}_{speaker}.mp3"
-            seg_path.write_bytes(audio_bytes)
-            segment_files.append((seg_path, speaker))
-
-            full_text_parts.append(chunk_text)
-        except Exception as e:
-            print(f"\n❌ Failed on chunk {idx}: {e}")
-            return None
-
-    pbar.close()
-
-    if not segment_files:
-        print("❌ No audio generated.")
-        return None
-
-    # === CONCATENATE with smart pauses between speakers ===
-    print("🔗 Merging audio segments...")
-    final_audio = AudioSegment.empty()
-    prev_speaker = None
-
-    for seg_path, speaker in segment_files:
-        audio = AudioSegment.from_mp3(seg_path)
-        if prev_speaker is not None and speaker != prev_speaker:
-            final_audio += AudioSegment.silent(duration=350)  # natural turn pause
-        final_audio += audio
-        prev_speaker = speaker
+    if has_chapters:
+        print(f"   📖 Detected {len(chapters)} chapters/sections")
 
     base_name = script_path.stem
-    final_mp3 = OUTPUT_DIR / f"{base_name}.mp3"
-    final_audio.export(final_mp3, format="mp3", bitrate="192k")
-    print(f"✅ Final audio saved: {final_mp3}")
+    all_chapter_audios: List[AudioSegment] = []
+    all_full_text_parts: List[str] = []
+    chapter_mp3_paths: List[Path] = []
 
-    # Cleanup temp segments
+    # Per-speaker stitching history (global across chapters for consistent voice)
+    speaker_request_history: Dict[str, List[str]] = defaultdict(list)
+
+    for ch_idx, chapter in enumerate(chapters, 1):
+        ch_title = chapter["title"]
+        ch_text = chapter["text"]
+        if not ch_text.strip():
+            continue
+
+        print(f"\n   ▶️  Chapter {ch_idx}: {ch_title[:60]}{'...' if len(ch_title) > 60 else ''}")
+
+        blocks = parse_script_for_voices_and_emotions(ch_text)
+        if not blocks:
+            continue
+
+        # Count speech vs pause for logging
+        speech_blocks = [b for b in blocks if b["type"] == "speech"]
+        print(f"      Found {len(speech_blocks)} speech segment(s) with emotion/pause support")
+
+        # Build generation tasks: expand long speech into chunks, apply emotion params
+        generation_tasks = []  # list of (speaker, chunk_text, voice_id, emotion, params_dict)
+        for block in blocks:
+            if block["type"] == "pause":
+                generation_tasks.append(("__PAUSE__", block["seconds"], None, None, None))
+                continue
+
+            speaker = block["speaker"]
+            emotion = block.get("emotion")
+            text = block["text"]
+
+            voice_id = voices.get(speaker) or voices.get("default") or DEFAULT_VOICE_ID
+            if not voice_id:
+                print(f"❌ No voice ID found for speaker '{speaker}'.")
+                return None
+
+            # Base params + emotion override
+            params = {
+                "stability": STABILITY,
+                "similarity_boost": SIMILARITY_BOOST,
+                "style": STYLE,
+                "speed": 1.0,
+                "use_speaker_boost": USE_SPEAKER_BOOST
+            }
+            if emotion and emotion in EMOTION_PRESETS:
+                preset = EMOTION_PRESETS[emotion]
+                for k, v in preset.items():
+                    if k in params:
+                        params[k] = v
+                    elif k == "pause_seconds":
+                        pass  # handled separately
+
+            sub_chunks = split_into_chunks(text)
+            for chunk in sub_chunks:
+                generation_tasks.append((speaker, chunk, voice_id, emotion, params))
+
+        print(f"      Total generation tasks (chunks + pauses): {len(generation_tasks)}")
+
+        # Generate audio for this chapter
+        ch_segment_files: List[Tuple[Path, str, Optional[str]]] = []  # (path, speaker, emotion)
+        ch_text_parts = []
+
+        pbar = tqdm(generation_tasks, desc=f"   Chapter {ch_idx}", unit="task", leave=False)
+        for idx, task in enumerate(pbar, 1):
+            if task[0] == "__PAUSE__":
+                _, seconds, _, _, _ = task
+                # We will insert silence later during merge
+                ch_segment_files.append((None, "__PAUSE__", seconds))
+                continue
+
+            speaker, chunk_text, voice_id, emotion, params = task
+            prev_ids = speaker_request_history[speaker]
+
+            try:
+                audio_bytes, req_id = generate_audio_segment(
+                    client,
+                    chunk_text,
+                    voice_id,
+                    MODEL_ID,
+                    previous_request_ids=prev_ids,
+                    stability=params["stability"],
+                    similarity_boost=params["similarity_boost"],
+                    style=params["style"],
+                    speed=params.get("speed", 1.0),
+                    use_speaker_boost=params.get("use_speaker_boost", True)
+                )
+                if req_id:
+                    speaker_request_history[speaker].append(req_id)
+
+                seg_path = TEMP_DIR / f"ch{ch_idx}_seg{idx:04d}_{speaker}.mp3"
+                seg_path.write_bytes(audio_bytes)
+                ch_segment_files.append((seg_path, speaker, emotion))
+                ch_text_parts.append(chunk_text)
+            except Exception as e:
+                print(f"\n❌ Failed on chapter {ch_idx} task {idx}: {e}")
+                return None
+        pbar.close()
+
+        if not ch_segment_files:
+            continue
+
+        # Merge chapter audio (with pauses and emotion-aware but no extra pause needed)
+        print(f"   🔗 Merging chapter {ch_idx}...")
+        ch_audio = AudioSegment.empty()
+        prev_speaker = None
+
+        for item in ch_segment_files:
+            if item[0] is None:  # pause
+                _, _, seconds = item
+                ch_audio += AudioSegment.silent(duration=int(seconds * 1000))
+                continue
+
+            seg_path, speaker, emotion = item
+            audio = AudioSegment.from_mp3(seg_path)
+            if prev_speaker is not None and speaker != prev_speaker:
+                ch_audio += AudioSegment.silent(duration=350)  # speaker turn pause
+            ch_audio += audio
+            prev_speaker = speaker
+
+        # Save chapter MP3
+        safe_title = re.sub(r'[^A-Za-z0-9_-]+', '_', ch_title)[:40]
+        ch_mp3_name = f"{base_name}_ch{ch_idx:02d}_{safe_title}.mp3"
+        ch_mp3_path = OUTPUT_DIR / ch_mp3_name
+        ch_audio.export(ch_mp3_path, format="mp3", bitrate="192k")
+        print(f"   ✅ Chapter saved: {ch_mp3_name}")
+        chapter_mp3_paths.append(ch_mp3_path)
+        all_chapter_audios.append(ch_audio)
+        all_full_text_parts.extend(ch_text_parts)
+
+    # === FINAL FULL AUDIO (merge all chapters with chapter break pauses) ===
+    print("\n🔗 Creating full merged audio...")
+    if not all_chapter_audios:
+        print("❌ No audio generated for any chapter.")
+        return None
+
+    final_audio = AudioSegment.empty()
+    for i, ch_audio in enumerate(all_chapter_audios):
+        if i > 0:
+            final_audio += AudioSegment.silent(duration=1200)  # ~1.2s break between chapters
+        final_audio += ch_audio
+
+    full_mp3 = OUTPUT_DIR / f"{base_name}_full.mp3"
+    final_audio.export(full_mp3, format="mp3", bitrate="192k")
+    print(f"✅ Full audio saved: {full_mp3.name}")
+
+    # Also save a clean "main" output without _full suffix for convenience
+    main_mp3 = OUTPUT_DIR / f"{base_name}.mp3"
+    final_audio.export(main_mp3, format="mp3", bitrate="192k")
+    print(f"✅ Main output also saved as: {main_mp3.name}")
+
+    # Cleanup
     shutil.rmtree(TEMP_DIR, ignore_errors=True)
-    TEMP_DIR.mkdir(exist_ok=True)  # recreate for next script if batch
+    TEMP_DIR.mkdir(exist_ok=True)
 
-    full_text = "\n\n".join(full_text_parts)
+    full_text = "\n\n".join(all_full_text_parts)
 
-    if generate_subs:
-        generate_subtitles(client, final_mp3, full_text, base_name)
+    if generate_subs and full_text.strip():
+        generate_subtitles(client, main_mp3, full_text, base_name)
 
-    return final_mp3
+    if has_chapters:
+        print(f"\n📚 Generated {len(chapter_mp3_paths)} chapter files + full audio + subtitles")
+
+    return main_mp3
 
 
 def main():
@@ -432,8 +642,26 @@ def main():
     generate_subs = not args.no_subtitles
 
     if args.dry_run:
-        print("🧪 DRY RUN MODE — No API calls will be made\n")
-        print("Dry-run preview coming in next update. For now, just run without --dry-run on a short script first.")
+        print("🧪 DRY RUN MODE — No API calls or credits used\n")
+        script_text = Path(args.script if not args.batch else "script.txt").read_text(encoding="utf-8") if Path(args.script if not args.batch else "script.txt").exists() else ""
+        if script_text:
+            chapters = split_into_chapters(script_text)
+            blocks = parse_script_for_voices_and_emotions(script_text)
+            speakers = set(b.get("speaker", "default") for b in blocks if b["type"] == "speech")
+            emotions = set(b.get("emotion") for b in blocks if b.get("emotion"))
+            pauses = [b for b in blocks if b["type"] == "pause"]
+            print(f"📖 Chapters detected: {len(chapters)}")
+            for i, ch in enumerate(chapters, 1):
+                print(f"   {i}. {ch['title'][:70]}")
+            print(f"🎭 Speakers found: {', '.join(sorted(speakers))}")
+            if emotions:
+                print(f"🎨 Emotions detected: {', '.join(sorted(emotions))}")
+            if pauses:
+                print(f"⏸️  Pause tags: {len(pauses)} (will insert natural silences)")
+            print(f"📝 Total speech blocks: {len([b for b in blocks if b['type']=='speech'])}")
+            print("\n✅ Dry-run complete. Run without --dry-run to generate audio.")
+        else:
+            print("No script found for preview.")
         return
 
     if args.batch:

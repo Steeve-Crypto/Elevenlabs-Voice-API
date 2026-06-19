@@ -23,11 +23,18 @@ Drop 5, 10, or 20 scripts into the `scripts/` folder and generate all voice-over
 ✅ **Multi-Voice / Character Switching**  
 Use simple tags like [NARRATOR], [EXPERT], [GUEST] in your script. The tool switches voices automatically, adds natural pauses between speakers, and keeps each character's prosody consistent using per-speaker Request Stitching.
 
+✅ **Emotion & Style Tags**  
+Add [excited], [whisper], [dramatic], [calm], [energetic], [happy], [sad], [serious] directly in your script. The tool automatically adjusts stability, style (exaggeration), and speed for more human, expressive delivery. No more flat AI sound.
+
+✅ **Smart Chapters + Multi-File Output**  
+Detect ## Chapter headings, "Chapter 1:", etc. Automatically generates separate high-quality MP3 for each chapter + one full merged audio file. Perfect for long-form, courses, or easy repurposing into Shorts/Reels.
+
 ✅ **Automatic Professional Subtitles (SRT + VTT)**  
 Powered by ElevenLabs Forced Alignment. Get perfectly timed word-level subtitles in seconds. Huge for YouTube SEO, retention, accessibility, and repurposing content.
 
-✅ **Still has everything from before**  
-Automatic long-script chunking, batch processing, dry-run safety, beautiful progress bars, and full control via .env.
+✅ **Everything else you loved**  
+Automatic long-script chunking with Request Stitching, full batch processing, --dry-run safety net, beautiful tqdm progress bars, and full .env customization.
+
 
 ✅ **Uses your own cloned voice** — 100% safe for YouTube monetization.
 

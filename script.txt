@@ -1,14 +1,27 @@
+## Introduction
 [NARRATOR]
 Welcome back to the channel, everyone. Today we're exploring how using your own cloned voice with smart tools can completely transform your YouTube workflow.
 
 [EXPERT]
 In my experience after running multiple faceless channels, the biggest game-changer has been consistency. When your voice sounds exactly like you every single video, viewers trust you faster and watch longer.
 
+## The Power of Multi-Voice
 [NARRATOR]
 That's exactly right. And with the new multi-voice support in this tool, you can now have different characters or experts appear naturally in the same video without any manual editing.
 
 [EXPERT]
 Yes! Just use tags like [NARRATOR] and [EXPERT] in your script, map the voices in voices.json, and the tool handles stitching, pauses between speakers, and even generates perfect subtitles automatically.
 
+## Emotion & Style Control
+[NARRATOR]
+[excited] This is where it gets really powerful! You can now add [whisper] whispered secrets [/whisper] or [dramatic] dramatic emphasis [/dramatic] directly in your script.
+
+[calm] For storytelling moments, use calm delivery. For hype sections, go energetic.
+
+## How to Use It
 [NARRATOR]
 Ready to try it? Just replace this example with your own script and run the tool. Your cloned voice stays 100% YouTube monetization safe.
+
+[pause 1.5s]
+[EXPERT]
+Don't forget to test with a short script first!
