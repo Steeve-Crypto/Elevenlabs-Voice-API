@@ -1,0 +1,6 @@
+Paste your full video script here.
+
+Example:
+Hello everyone, welcome back to the channel! Today we're talking about how to use AI voice cloning for YouTube videos without getting demonetized.
+
+Make sure to replace this text with your actual narration script. The longer the better — the Flash model can handle up to around 40 minutes in one generation.
